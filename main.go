@@ -13,7 +13,7 @@ const PAGE_SIZE = 4096 // 4KB
 
 type PageAccess struct {
 	PageID string
-	Type   string // "I" para instrução, "D" para dados
+	Type   string // "I" = instrução, "D" = dados
 }
 
 type PageFrame struct {
@@ -315,13 +315,9 @@ func (s *Simulator) EstimatePageTableSize() {
 
 	fmt.Println("\n=== ESTIMATIVA DO TAMANHO DA TABELA DE PÁGINAS ===")
 
-	// Cada entrada da tabela de páginas tem tipicamente 8 bytes
 	entrySize := 8
 	numDistinctPages := len(s.distinctPages)
 
-	// Para uma tabela de páginas de 1 nível, precisamos de uma entrada
-	// para cada página possível no espaço de endereçamento
-	// Mas aqui vamos calcular baseado apenas nas páginas acessadas
 	tableSize := numDistinctPages * entrySize
 
 	fmt.Printf("Páginas distintas acessadas: %d\n", numDistinctPages)
@@ -339,12 +335,10 @@ func (s *Simulator) Run() {
 	fmt.Printf("Número de acessos: %d\n", len(s.accesses))
 	fmt.Printf("Páginas distintas: %d\n", len(s.distinctPages))
 
-	// Estimativa de tempo
 	estimatedTime := s.estimateExecutionTime()
 	fmt.Printf("Tempo estimado: %s\n", estimatedTime)
 	fmt.Println()
 
-	// Verifica se há memória suficiente
 	if s.totalFrames == 0 {
 		fmt.Printf("ERRO: Memória insuficiente! Tamanho mínimo necessário: %d bytes (1 página)\n", PAGE_SIZE)
 		return
@@ -360,10 +354,10 @@ func (s *Simulator) Run() {
 	} else {
 		fmt.Println("=== ALGORITMO ÓTIMO ===")
 		fmt.Println("Algoritmo ótimo ignorado (use -skipoptimal para casos extremos)")
-		optimalFaults = -1 // Indica que não foi executado
+		optimalFaults = -1 // Indica que não foi executado, apenas para testes
 	}
 
-	// Executa algoritmo do Relógio
+	// execucao do algoritmo do relogio
 	fmt.Println("\n=== ALGORITMO DO RELÓGIO ===")
 	clockFaults := s.ClockAlgorithm()
 	fmt.Printf("Faltas de página (Relógio): %d\n", clockFaults)
@@ -378,13 +372,12 @@ func (s *Simulator) Run() {
 		fmt.Println("Eficiência do algoritmo do Relógio: N/A (sem faltas de página)")
 	}
 
-	// Mostra informações adicionais se solicitado
 	s.ShowLoadCount()
 	s.EstimatePageTableSize()
 }
 
 func (s *Simulator) estimateExecutionTime() string {
-	// A estimativa agora pode ser mais otimista para o algoritmo ótimo
+	// funcao utilitaria
 	accesses := len(s.accesses)
 	if s.skipOptimal {
 		return "< 5 segundos"
@@ -433,7 +426,6 @@ func main() {
 
 	simulator := NewSimulator(memorySize)
 
-	// Processa opções
 	for i := 3; i < len(os.Args); i++ {
 		switch os.Args[i] {
 		case "-all":
@@ -454,7 +446,6 @@ func main() {
 		}
 	}
 
-	// Carrega arquivo de entrada
 	fmt.Printf("Carregando arquivo: %s\n", filename)
 	err = simulator.LoadAccessFile(filename)
 	if err != nil {
@@ -464,6 +455,5 @@ func main() {
 
 	fmt.Printf("Arquivo carregado com sucesso!\n\n")
 
-	// Executa simulação
 	simulator.Run()
 }
