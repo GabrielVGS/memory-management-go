@@ -118,24 +118,21 @@ func (s *Simulator) LoadAccessFile(filename string) error {
 
 func (s *Simulator) OptimalAlgorithm() int {
 	frames := make([]string, 0, s.totalFrames)
-	frameMap := make(map[string]int) // page -> frame index
+	frameMap := make(map[string]int) // page : frame index
 	pageFaults := 0
 	s.pageLoadCount = make(map[string]int)
 
-	// Pre-computation is good! Keep this.
-	// It builds a map of page IDs to a sorted list of their access indices.
 	nextUse := make(map[string][]int)
 	for i, access := range s.accesses {
 		pageID := access.PageID
 		nextUse[pageID] = append(nextUse[pageID], i)
 	}
 
-	// Process each access
 	for i, access := range s.accesses {
 		pageID := access.PageID
 
 		if _, found := frameMap[pageID]; found {
-			// Hit, do nothing
+			// Hit
 			continue
 		}
 
@@ -144,25 +141,20 @@ func (s *Simulator) OptimalAlgorithm() int {
 		s.pageLoadCount[pageID]++
 
 		if len(frames) < s.totalFrames {
-			// Still have space
 			frames = append(frames, pageID)
 			frameMap[pageID] = len(frames) - 1
 		} else {
-			// Find page with farthest next use
 			farthestNextUse := -1
 			victimFrame := -1
 
 			for frameIdx, pageInFrame := range frames {
 				positions := nextUse[pageInFrame]
 
-				// OPTIMIZATION: Use binary search instead of a linear scan
-				// Find the first occurrence of this page *after* the current position 'i'.
-				// sort.SearchInts finds the index where 'i+1' would be inserted.
 				searchIndex := sort.SearchInts(positions, i+1)
 
 				var nextPos int
 				if searchIndex == len(positions) {
-					// This page is not used again in the future. Ideal victim!
+					// vitima
 					nextPos = len(s.accesses) // Set to a value representing "infinity"
 				} else {
 					nextPos = positions[searchIndex]
@@ -173,23 +165,20 @@ func (s *Simulator) OptimalAlgorithm() int {
 					victimFrame = frameIdx
 				}
 
-				// If we found a page that is never used again, we can stop searching immediately.
 				if nextPos == len(s.accesses) {
 					break
 				}
 			}
 
-			// Remove victim page
+			//remove vitima
 			victimPage := frames[victimFrame]
 			delete(frameMap, victimPage)
 
-			// Add new page
+			// add pagina
 			frames[victimFrame] = pageID
 			frameMap[pageID] = victimFrame
 		}
 	}
-
-	// Didactic mode printing can be added back here if needed
 	return pageFaults
 }
 
