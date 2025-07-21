@@ -116,80 +116,80 @@ func (s *Simulator) LoadAccessFile(filename string) error {
 	return nil
 }
 
-// Algoritmo Ótimo (OPT) - Versão Otimizada
 func (s *Simulator) OptimalAlgorithm() int {
 	frames := make([]string, 0, s.totalFrames)
-	inMemory := make(map[string]bool) // mapa para verificar a existência de uma página no frame em O(1)
+	frameMap := make(map[string]int) // page -> frame index
 	pageFaults := 0
-
 	s.pageLoadCount = make(map[string]int)
 
-	// Pre-calcula as posições de todos os acessos futuros para cada página.
-	// Isso evita a necessidade de escanear a lista de acessos repetidamente.
-	pageAccessPositions := make(map[string][]int)
+	// Pre-computation is good! Keep this.
+	// It builds a map of page IDs to a sorted list of their access indices.
+	nextUse := make(map[string][]int)
 	for i, access := range s.accesses {
-		pageAccessPositions[access.PageID] = append(pageAccessPositions[access.PageID], i)
+		pageID := access.PageID
+		nextUse[pageID] = append(nextUse[pageID], i)
 	}
 
+	// Process each access
 	for i, access := range s.accesses {
 		pageID := access.PageID
 
-		// Verifica se a página já está na memória
-		if _, found := inMemory[pageID]; found {
-			if s.didacticMode {
-				fmt.Printf("Acesso %d - Página %s: Hit\n", i+1, pageID)
-			}
+		if _, found := frameMap[pageID]; found {
+			// Hit, do nothing
 			continue
 		}
 
-		// Falta de página
+		// Page fault
 		pageFaults++
 		s.pageLoadCount[pageID]++
 
 		if len(frames) < s.totalFrames {
-			// Ainda há espaço na memória
+			// Still have space
 			frames = append(frames, pageID)
-			inMemory[pageID] = true
+			frameMap[pageID] = len(frames) - 1
 		} else {
-			// Precisa substituir uma página
-			// Encontra a página que será usada mais tarde (ou nunca mais)
-			farthest := -1
-			victimIndex := -1
+			// Find page with farthest next use
+			farthestNextUse := -1
+			victimFrame := -1
 
 			for frameIdx, pageInFrame := range frames {
-				// Procura o próximo uso desta página usando os dados pré-calculados
-				positions := pageAccessPositions[pageInFrame]
+				positions := nextUse[pageInFrame]
 
-				// Usa busca binária (sort.SearchInts) para encontrar eficientemente a próxima ocorrência
-				nextUsePos := sort.SearchInts(positions, i+1)
+				// OPTIMIZATION: Use binary search instead of a linear scan
+				// Find the first occurrence of this page *after* the current position 'i'.
+				// sort.SearchInts finds the index where 'i+1' would be inserted.
+				searchIndex := sort.SearchInts(positions, i+1)
 
-				if nextUsePos == len(positions) {
-					// Esta página nunca mais será usada, é a vítima ideal.
-					victimIndex = frameIdx
-					break // Encontramos a melhor vítima, podemos parar a busca.
+				var nextPos int
+				if searchIndex == len(positions) {
+					// This page is not used again in the future. Ideal victim!
+					nextPos = len(s.accesses) // Set to a value representing "infinity"
+				} else {
+					nextPos = positions[searchIndex]
 				}
 
-				nextUse := positions[nextUsePos]
-				if nextUse > farthest {
-					farthest = nextUse
-					victimIndex = frameIdx
+				if nextPos > farthestNextUse {
+					farthestNextUse = nextPos
+					victimFrame = frameIdx
+				}
+
+				// If we found a page that is never used again, we can stop searching immediately.
+				if nextPos == len(s.accesses) {
+					break
 				}
 			}
 
-			// Remove a página vítima da memória
-			delete(inMemory, frames[victimIndex])
-			// Adiciona a nova página
-			frames[victimIndex] = pageID
-			inMemory[pageID] = true
-		}
+			// Remove victim page
+			victimPage := frames[victimFrame]
+			delete(frameMap, victimPage)
 
-		if s.didacticMode {
-			fmt.Printf("Acesso %d - Página %s: Falta de página\n", i+1, pageID)
-			fmt.Printf("Estado da memória: %v\n", frames)
-			fmt.Println("---")
+			// Add new page
+			frames[victimFrame] = pageID
+			frameMap[pageID] = victimFrame
 		}
 	}
 
+	// Didactic mode printing can be added back here if needed
 	return pageFaults
 }
 
@@ -402,6 +402,7 @@ func main() {
 		fmt.Println()
 		fmt.Println("Exemplos de tamanho de memória:")
 		fmt.Println("  8192          : 8 KB")
+		fmt.Println("  65536		 : 64 KB")
 		fmt.Println("  32768         : 32 KB")
 		fmt.Println("  16777216      : 16 MB")
 		fmt.Println("  134217728     : 128 MB")
