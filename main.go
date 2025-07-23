@@ -69,24 +69,21 @@ func (s *Simulator) LoadAccessFile(filename string) error {
 		var pageID string
 
 		if len(parts) >= 2 {
-			// Formato: "numero_linha página" (ex: "1 I0")
 			pageID = parts[1]
 		} else if len(parts) == 1 {
-			// Formato: apenas "página" (ex: "I0")
 			pageID = parts[0]
 		} else {
 			invalidLines++
-			if invalidLines <= 10 { // Mostra apenas as primeiras 10 linhas inválidas
+			if invalidLines <= 10 {
 				fmt.Printf("Aviso: Linha %d ignorada (formato inválido): %s\n", lineCount, line)
 			}
 			continue
 		}
 
-		// Verifica se o pageID tem formato válido (começa com I ou D)
 		if len(pageID) >= 2 && (pageID[0] == 'I' || pageID[0] == 'D') {
 			pageAccess := PageAccess{
 				PageID: pageID,
-				Type:   string(pageID[0]), // Primeiro caractere (I ou D)
+				Type:   string(pageID[0]), // (I ou D)
 			}
 			s.accesses = append(s.accesses, pageAccess)
 			s.distinctPages[pageAccess.PageID] = true
@@ -155,7 +152,7 @@ func (s *Simulator) OptimalAlgorithm() int {
 				var nextPos int
 				if searchIndex == len(positions) {
 					// vitima
-					nextPos = len(s.accesses) // Set to a value representing "infinity"
+					nextPos = len(s.accesses)
 				} else {
 					nextPos = positions[searchIndex]
 				}
